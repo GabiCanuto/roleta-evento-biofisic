@@ -541,7 +541,7 @@
   <main class="container">
     <div class="content">
       <div class="hero">
-        <div class="pill">✨ Evento Biofísic</div>
+        <div class="pill">✨ Campanha Everest</div>
         <h1 class="title">Roleta de Prêmios</h1>
         <p class="subtitle">
           Gire a roleta e descubra seu prêmio em uma experiência com a cara da Everest.
@@ -593,28 +593,30 @@
   <audio id="loseSound" preload="auto" src="https://assets.mixkit.co/active_storage/sfx/270/270-preview.mp3"></audio>
 
   <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxh8vzzX0Lw2OlZUj3ctoxyfEMeY2JcWvi0j57Xoh8U3aNMsOgW2lzDYoxzCVj94D9sXA/exec";
-
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwp-bJGsSpxoJ9GV206COIYzcHMLV-IRD6Zhhgk6QA4SzoHGz_yarz0AIXhDsGEZiVVHQ/exec";
     const prizes = [
-      { label: "Chaveiro", color: "#FFD700", icon: "fa-key" },
       { label: "Cordão", color: "#B100FF", icon: "fa-tag" },
-      { label: "Bolsa Take", color: "#FF174D", icon: "fa-bag-shopping" },
-      { label: "Copo", color: "#18A8E8", icon: "fa-mug-hot" },
-      { label: "Aromatizante", color: "#10E07A", icon: "fa-spray-can-sparkles" },
-      { label: "Fone", color: "#FF7A00", icon: "fa-headphones" },
-      { label: "Voucher 100", color: "#E53170", icon: "fa-percent" },
-      { label: "Voucher 50", color: "#FF9800", icon: "fa-ticket" }
+            { label: "Cupom 20%", color: "#00C2FF", icon: "fa-percent" },
+      { label: "Bolsa Take", color: "#9BFF00", icon: "fa-bag-shopping" },
+      { label: "Fone Everest", color: "#18A8E8", icon: "fa-headphones" },
+      { label: "Copo térmico", color: "#FF7A00", icon: "fa-mug-hot" },
+      { label: "Cupom 30%", color: "#E53170", icon: "fa-percent" },
+      { label: "Chaveiro Take", color: "#5B8CFF", icon: "fa-key" },
+      { label: "Aromatizante", color: "#7ED957", icon: "fa-spray-can-sparkles" },
+      { label: "Cupom 40%", color: "#FF174D", icon: "fa-percent" }
     ];
 
     const weightedPrizes = [
-      { label: "Chaveiro", weight: 30 },
-      { label: "Cordão", weight: 20 },
-      { label: "Bolsa Take", weight: 10 },
-      { label: "Copo", weight: 4 },
-      { label: "Aromatizante", weight: 3 },
-      { label: "Fone", weight: 3 },
-      { label: "Voucher 100", weight: 15 },
-      { label: "Voucher 50", weight: 15 }
+      { label: "Cordão", weight: 28 },
+      { label: "Bolsa Take", weight: 12 },
+      { label: "Fone Everest", weight: 1.2 },
+      { label: "Copo térmico", weight: 1.2 },
+      { label: "Copo americano", weight: 4 },
+      { label: "Chaveiro Take", weight: 8 },
+      { label: "Aromatizante", weight: 12 },
+      { label: "Cupom 20%", weight: 20 },
+      { label: "Cupom 30%", weight: 12 },
+      { label: "Cupom 40%", weight: 8 }
     ];
 
     const wheelGroup = document.getElementById("wheelGroup");
@@ -686,6 +688,7 @@
 
         const dividerStart = polarToCartesian(cx, cy, innerR, startAngle);
         const dividerEnd = polarToCartesian(cx, cy, outerR, startAngle);
+
         const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
         line.setAttribute("x1", dividerStart.x);
         line.setAttribute("y1", dividerStart.y);
@@ -866,26 +869,75 @@
       e.target.value = formatPhone(e.target.value);
     });
 
-    async function postData(payload) {
-      try {
-        const res = await fetch(SCRIPT_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8"
-          },
-          body: JSON.stringify(payload)
+function postData(payload) {
+      return new Promise((resolve) => {
+        const callbackName =
+          "callback_" +
+          Date.now() +
+          "_" +
+          Math.floor(Math.random() * 10000);
+
+        let finished = false;
+
+        const timeout = setTimeout(() => {
+          if (finished) return;
+          finished = true;
+
+          resolve({
+            ok: false,
+            message: "Tempo esgotado ao conectar com a planilha."
+          });
+
+          delete window[callbackName];
+
+          if (script && script.parentNode) {
+            script.parentNode.removeChild(script);
+          }
+        }, 15000);
+
+        window[callbackName] = function(response) {
+          if (finished) return;
+          finished = true;
+
+          clearTimeout(timeout);
+          resolve(response);
+
+          delete window[callbackName];
+
+          if (script && script.parentNode) {
+            script.parentNode.removeChild(script);
+          }
+        };
+
+        const params = new URLSearchParams({
+          ...payload,
+          callback: callbackName,
+          t: Date.now()
         });
 
-        const text = await res.text();
+        const script = document.createElement("script");
+        script.src = `${SCRIPT_URL}?${params.toString()}`;
 
-        try {
-          return JSON.parse(text);
-        } catch {
-          return { ok: false, message: "Resposta inválida do servidor." };
-        }
-      } catch (error) {
-        return { ok: false, message: "Erro de conexão com o servidor." };
-      }
+        script.onerror = function() {
+          if (finished) return;
+          finished = true;
+
+          clearTimeout(timeout);
+
+          resolve({
+            ok: false,
+            message: "Erro ao conectar com o Apps Script."
+          });
+
+          delete window[callbackName];
+
+          if (script && script.parentNode) {
+            script.parentNode.removeChild(script);
+          }
+        };
+
+        document.body.appendChild(script);
+      });
     }
 
     function setStartLoading(loading) {
@@ -1052,12 +1104,23 @@
 
         let mensagem = "";
 
-        if (selectedPrize.label === "Voucher 100") {
-          mensagem = `${participant.nome}, você ganhou Voucher 100! 🎉\nVálido para compras acima de R$200.`;
-        } else if (selectedPrize.label === "Voucher 50") {
-          mensagem = `${participant.nome}, você ganhou Voucher 50! 🎉\nVálido para compras acima de R$100.`;
+        if (selectedPrize.label === "Cupom 20%") {
+          mensagem = `${participant.nome}, você ganhou ${selectedPrize.label}! 🎉
+
+Cupom válido para compras acima de R$100 no APP ou SITE da Everest.`;
+
+        } else if (selectedPrize.label === "Cupom 30%") {
+          mensagem = `${participant.nome}, você ganhou ${selectedPrize.label}! 🎉
+
+Cupom válido para compras acima de R$150 no APP ou SITE da Everest.`;
+
+        } else if (selectedPrize.label === "Cupom 40%") {
+          mensagem = `${participant.nome}, você ganhou ${selectedPrize.label}! 🎉
+
+Cupom válido para compras acima de R$200 no APP ou SITE da Everest.`;
+
         } else {
-          mensagem = `${participant.nome}, você ganhou: ${selectedPrize.label}! 🎁`;
+          mensagem = `${participant.nome}, você ganhou: ${selectedPrize.label} 🎁`;
         }
 
         message.textContent = "Parabéns! Você ganhou ✨";
